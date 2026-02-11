@@ -275,30 +275,37 @@
   <div style="position:relative;">
     <canvas id="game" width="640" height="560"></canvas>
 
-    <div id="start-screen">
+    <div id="start-screen" onclick="startGame()">
       <div class="apple-logo">🍎</div>
       <div class="screen-title">FRUIT RESCUE</div>
       <div class="screen-subtitle">
         Save Chef Nick Giovanni<br>from the Evil Chef!
       </div>
-      <div class="screen-info">
+      <div class="screen-info" id="start-controls">
         ← → MOVE &nbsp; | &nbsp; SPACE JUMP &nbsp; | &nbsp; ↑↓ CLIMB<br><br>
         Dodge the knives! Reach the top!<br>
         Don't get sliced! 🔪<br><br>
         Evolve into rarer fruits each level! 🍎→🍊→🍐→🥭→⭐
       </div>
-      <div class="blink" onclick="startGame()">— PRESS ENTER OR TAP TO START —</div>
+      <div class="screen-info" id="start-controls-mobile" style="display:none;">
+        Use D-pad to move and climb<br>
+        Tap JUMP button to jump<br><br>
+        Dodge the knives! Reach the top!<br>
+        Don't get sliced! 🔪<br><br>
+        Evolve into rarer fruits each level! 🍎→🍊→🍐→🥭→⭐
+      </div>
+      <div class="blink" id="start-prompt">— PRESS ENTER OR TAP TO START —</div>
     </div>
 
-    <div id="game-over-screen" style="display:none;">
+    <div id="game-over-screen" style="display:none;" onclick="startGame()">
       <div class="apple-logo" id="death-emoji">🍎💀</div>
       <div class="screen-title" style="color:#ff2222;">SLICED UP!</div>
       <div class="screen-subtitle" id="death-subtitle">The Evil Chef got you...</div>
       <div class="screen-info">FINAL SCORE: <span id="final-score">0</span></div>
-      <div class="blink" onclick="startGame()">— PRESS ENTER TO RETRY —</div>
+      <div class="blink" id="retry-prompt">— PRESS ENTER TO RETRY —</div>
     </div>
 
-    <div id="win-screen" style="display:none;">
+    <div id="win-screen" style="display:none;" onclick="nextLevel()">
       <div class="apple-logo" id="win-emoji">🍎🎉</div>
       <div class="screen-title" style="color:#44ff44;">RESCUED!</div>
       <div class="win-text">
@@ -309,7 +316,7 @@
         <span id="difficulty-warning" style="color:#ff6644;font-size:9px;"></span>
       </div>
       <br>
-      <div class="blink" onclick="startGame()">— PRESS ENTER FOR NEXT LEVEL —</div>
+      <div class="blink" id="next-level-prompt">— PRESS ENTER FOR NEXT LEVEL —</div>
     </div>
   </div>
   <div id="message-bar">
@@ -378,6 +385,7 @@ jumpSound.preload = 'auto';
 
 let audioStarted = false;
 let audioMuted = false;
+let lastJumpSoundTime = 0;
 
 // Log audio loading status
 [bgMusic, knifeSound, laughSound, winSound, jumpSound].forEach((a, i) => {
@@ -410,6 +418,13 @@ function playSound(sound) {
   const clone = sound.cloneNode();
   clone.volume = sound.volume;
   clone.play().catch(() => {});
+}
+
+function playJumpSound() {
+  const now = Date.now();
+  if (now - lastJumpSoundTime < 200) return; // 200ms cooldown
+  lastJumpSoundTime = now;
+  playSound(jumpSound);
 }
 
 function toggleMute() {
@@ -560,6 +575,13 @@ if (isMobile) {
   document.getElementById('mobile-controls').classList.add('show');
   document.getElementById('desktop-controls').style.display = 'none';
   document.getElementById('mobile-controls-text').style.display = 'inline';
+
+  // Update screen prompts for mobile
+  document.getElementById('start-prompt').textContent = '— TAP TO START —';
+  document.getElementById('retry-prompt').textContent = '— TAP TO RETRY —';
+  document.getElementById('next-level-prompt').textContent = '— TAP FOR NEXT LEVEL —';
+  document.getElementById('start-controls').style.display = 'none';
+  document.getElementById('start-controls-mobile').style.display = 'block';
 }
 
 // ====== INPUT ======
@@ -577,7 +599,7 @@ document.addEventListener('keydown', e => {
   if (e.code === 'Enter' || e.code === 'Space') {
     if (gameState === 'start') startGame();
     else if (gameState === 'gameover') startGame();
-    else if (gameState === 'win') { level++; startGame(); }
+    else if (gameState === 'win') nextLevel();
   }
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
     e.preventDefault();
@@ -1189,7 +1211,7 @@ function updatePlayer() {
       if (jump) {
         player.climbing = false;
         player.vy = -6;
-        playSound(jumpSound);
+        playJumpSound();
       }
       return;
     }
@@ -1212,7 +1234,7 @@ function updatePlayer() {
   if (jump && player.onGround) {
     player.vy = -7.5;
     player.onGround = false;
-    playSound(jumpSound);
+    playJumpSound();
   }
 
   // Gravity
@@ -1475,6 +1497,11 @@ function startGame() {
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('game-over-screen').style.display = 'none';
   document.getElementById('win-screen').style.display = 'none';
+}
+
+function nextLevel() {
+  level++;
+  startGame();
 }
 
 // Kick off
