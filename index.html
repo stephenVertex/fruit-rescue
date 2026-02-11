@@ -90,6 +90,19 @@
     min-height: 16px;
   }
 
+  #fps-counter {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 8px;
+    color: #0f0;
+    background: rgba(0,0,0,0.7);
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+    z-index: 100;
+  }
+
   /* Mobile Controls */
   #mobile-controls {
     display: none;
@@ -274,6 +287,7 @@
   </div>
   <div style="position:relative;">
     <canvas id="game" width="640" height="560"></canvas>
+    <div id="fps-counter">FPS: --</div>
 
     <div id="start-screen" onclick="startGame()">
       <div class="apple-logo">🍎</div>
@@ -346,6 +360,13 @@ const ctx = canvas.getContext('2d');
 const W = canvas.width;
 const H = canvas.height;
 
+// Off-screen canvas for cached background
+const bgCanvas = document.createElement('canvas');
+bgCanvas.width = W;
+bgCanvas.height = H;
+const bgCtx = bgCanvas.getContext('2d');
+let bgCached = false;
+
 // Game state
 let gameState = 'start'; // start, playing, dead, gameover, win
 let paused = false;
@@ -386,6 +407,11 @@ jumpSound.preload = 'auto';
 let audioStarted = false;
 let audioMuted = false;
 let lastJumpSoundTime = 0;
+
+// FPS tracking
+let lastFrameTime = performance.now();
+let frameTimes = [];
+let fps = 0;
 
 // Log audio loading status
 [bgMusic, knifeSound, laughSound, winSound, jumpSound].forEach((a, i) => {
@@ -1337,26 +1363,33 @@ function updateHUD() {
 }
 
 // ====== MAIN DRAW ======
-function drawBackground() {
+function cacheBackground() {
   // Dark factory / kitchen background
-  ctx.fillStyle = '#0e0e1a';
-  ctx.fillRect(0, 0, W, H);
+  bgCtx.fillStyle = '#0e0e1a';
+  bgCtx.fillRect(0, 0, W, H);
 
   // Brick pattern
-  ctx.fillStyle = 'rgba(60, 30, 20, 0.3)';
+  bgCtx.fillStyle = 'rgba(60, 30, 20, 0.3)';
   for (let by = 0; by < H; by += 20) {
     const offset = (Math.floor(by / 20) % 2) * 20;
     for (let bx = offset; bx < W; bx += 40) {
-      ctx.fillRect(bx + 1, by + 1, 38, 18);
+      bgCtx.fillRect(bx + 1, by + 1, 38, 18);
     }
   }
 
   // Subtle dark gradient at bottom
-  const grad = ctx.createLinearGradient(0, H - 100, 0, H);
+  const grad = bgCtx.createLinearGradient(0, H - 100, 0, H);
   grad.addColorStop(0, 'transparent');
   grad.addColorStop(1, 'rgba(0,0,0,0.4)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, H - 100, W, 100);
+  bgCtx.fillStyle = grad;
+  bgCtx.fillRect(0, H - 100, W, 100);
+
+  bgCached = true;
+}
+
+function drawBackground() {
+  if (!bgCached) cacheBackground();
+  ctx.drawImage(bgCanvas, 0, 0);
 }
 
 function draw() {
@@ -1412,6 +1445,16 @@ function draw() {
 // ====== GAME LOOP ======
 function gameLoop() {
   frameCount++;
+
+  // Calculate FPS
+  const now = performance.now();
+  const delta = now - lastFrameTime;
+  lastFrameTime = now;
+  frameTimes.push(delta);
+  if (frameTimes.length > 60) frameTimes.shift();
+  const avgDelta = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+  fps = Math.round(1000 / avgDelta);
+  document.getElementById('fps-counter').textContent = `FPS: ${fps}`;
 
   if (gameState === 'playing' && !paused) {
     updatePlayer();
