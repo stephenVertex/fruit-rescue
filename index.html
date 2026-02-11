@@ -97,7 +97,7 @@
     max-width: 640px;
     margin-top: 10px;
     position: relative;
-    height: 90px;
+    height: 100px;
   }
 
   #mobile-controls.show {
@@ -133,12 +133,12 @@
   }
 
   .dpad {
-    width: 90px;
-    height: 90px;
+    width: 150px;
+    height: 100px;
     position: relative;
     display: grid;
-    grid-template-columns: 30px 30px 30px;
-    grid-template-rows: 30px 30px 30px;
+    grid-template-columns: 50px 50px 50px;
+    grid-template-rows: 50px 50px;
     gap: 0;
   }
 
@@ -148,13 +148,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    font-size: 20px;
     color: #ffcc00;
     user-select: none;
     -webkit-user-select: none;
     cursor: pointer;
     touch-action: none;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,0.1);
   }
 
   .dpad-btn:active {
@@ -162,11 +162,10 @@
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
   }
 
-  .dpad-up { grid-column: 2; grid-row: 1; border-radius: 6px 6px 0 0; }
-  .dpad-down { grid-column: 2; grid-row: 3; border-radius: 0 0 6px 6px; }
-  .dpad-left { grid-column: 1; grid-row: 2; border-radius: 6px 0 0 6px; }
-  .dpad-right { grid-column: 3; grid-row: 2; border-radius: 0 6px 6px 0; }
-  .dpad-center { grid-column: 2; grid-row: 2; background: #111; border: 2px solid #333; cursor: default; }
+  .dpad-up { grid-column: 2; grid-row: 1; border-radius: 8px 8px 0 0; }
+  .dpad-down { grid-column: 2; grid-row: 2; border-radius: 0 0 8px 8px; }
+  .dpad-left { grid-column: 1; grid-row: 2; border-radius: 8px 0 0 8px; }
+  .dpad-right { grid-column: 3; grid-row: 2; border-radius: 0 8px 8px 0; }
 
   /* Responsive adjustments for mobile */
   @media (max-width: 700px) {
@@ -325,9 +324,8 @@
     <div class="dpad">
       <div class="dpad-btn dpad-up" id="dpad-up">▲</div>
       <div class="dpad-btn dpad-left" id="dpad-left">◀</div>
-      <div class="dpad-center"></div>
-      <div class="dpad-btn dpad-right" id="dpad-right">▶</div>
       <div class="dpad-btn dpad-down" id="dpad-down">▼</div>
+      <div class="dpad-btn dpad-right" id="dpad-right">▶</div>
     </div>
   </div>
 </div>
