@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fruit Rescue — Save Chef Nick Giovanni!</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Press Start 2P', monospace;
+    overflow: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(180, 40, 20, 0.15) 0%, transparent 60%),
+      radial-gradient(ellipse at 50% 100%, rgba(20, 60, 180, 0.1) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #game-wrapper {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  #title-bar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 8px 20px;
+    background: linear-gradient(180deg, #2a1a0a, #1a0e04);
+    border: 2px solid #c8842a;
+    border-radius: 6px;
+    box-shadow: 0 0 20px rgba(200, 132, 42, 0.3);
+  }
+
+  #title-bar .title {
+    font-family: 'Silkscreen', monospace;
+    font-size: 18px;
+    color: #ff4444;
+    text-shadow: 2px 2px 0 #880000, 0 0 10px rgba(255, 68, 68, 0.5);
+    letter-spacing: 2px;
+  }
+
+  #hud {
+    display: flex;
+    gap: 30px;
+    font-size: 10px;
+    color: #ffcc00;
+    text-shadow: 1px 1px 0 #886600;
+  }
+
+  #hud span { white-space: nowrap; }
+
+  canvas {
+    border: 3px solid #c8842a;
+    border-radius: 4px;
+    box-shadow:
+      0 0 30px rgba(200, 132, 42, 0.2),
+      inset 0 0 60px rgba(0,0,0,0.5);
+    image-rendering: pixelated;
+    display: block;
+  }
+
+  #message-bar {
+    font-size: 9px;
+    color: #aaa;
+    text-align: center;
+    letter-spacing: 1px;
+    min-height: 16px;
+  }
+
+  #start-screen, #game-over-screen, #win-screen {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(4px);
+  }
+
+  .screen-title {
+    font-family: 'Silkscreen', monospace;
+    font-size: 28px;
+    color: #ff4444;
+    text-shadow: 3px 3px 0 #880000, 0 0 20px rgba(255,68,68,0.5);
+    margin-bottom: 20px;
+  }
+
+  .screen-subtitle {
+    font-size: 10px;
+    color: #ffcc00;
+    margin-bottom: 10px;
+    text-align: center;
+    line-height: 1.8;
+  }
+
+  .screen-info {
+    font-size: 8px;
+    color: #888;
+    margin-bottom: 30px;
+    text-align: center;
+    line-height: 2;
+  }
+
+  .blink {
+    animation: blink 1s step-end infinite;
+    font-size: 11px;
+    color: #fff;
+    cursor: pointer;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  .apple-logo {
+    font-size: 60px;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 0 15px rgba(255,50,50,0.6));
+  }
+
+  .win-text {
+    font-size: 12px;
+    color: #44ff44;
+    text-shadow: 0 0 10px rgba(68,255,68,0.5);
+    text-align: center;
+    line-height: 2;
+  }
+</style>
+</head>
+<body>
+
+<div id="game-wrapper">
+  <div id="title-bar">
+    <span class="title" id="game-title">🍎 APPLE RESCUE</span>
+    <div id="hud">
+      <span>SCORE: <span id="score">0</span></span>
+      <span>LIVES: <span id="lives">❤️❤️❤️</span></span>
+      <span>LV<span id="level">1</span>: <span id="fruit-name">Apple</span></span>
+    </div>
+  </div>
+  <div style="position:relative;">
+    <canvas id="game" width="640" height="560"></canvas>
+
+    <div id="start-screen">
+      <div class="apple-logo">🍎</div>
+      <div class="screen-title">FRUIT RESCUE</div>
+      <div class="screen-subtitle">
+        Save Chef Nick Giovanni<br>from the Evil Chef!
+      </div>
+      <div class="screen-info">
+        ← → MOVE &nbsp; | &nbsp; SPACE JUMP &nbsp; | &nbsp; ↑↓ CLIMB<br><br>
+        Dodge the knives! Reach the top!<br>
+        Don't get sliced! 🔪<br><br>
+        Evolve into rarer fruits each level! 🍎→🍊→🍐→🥭→⭐
+      </div>
+      <div class="blink" onclick="startGame()">— PRESS ENTER OR TAP TO START —</div>
+    </div>
+
+    <div id="game-over-screen" style="display:none;">
+      <div class="apple-logo" id="death-emoji">🍎💀</div>
+      <div class="screen-title" style="color:#ff2222;">SLICED UP!</div>
+      <div class="screen-subtitle" id="death-subtitle">The Evil Chef got you...</div>
+      <div class="screen-info">FINAL SCORE: <span id="final-score">0</span></div>
+      <div class="blink" onclick="startGame()">— PRESS ENTER TO RETRY —</div>
+    </div>
+
+    <div id="win-screen" style="display:none;">
+      <div class="apple-logo" id="win-emoji">🍎🎉</div>
+      <div class="screen-title" style="color:#44ff44;">RESCUED!</div>
+      <div class="win-text">
+        Chef Nick Giovanni is free!<br>
+        <span id="win-grazie">"Grazie, little Apple!"</span><br><br>
+        SCORE: <span id="win-score">0</span><br><br>
+        <span id="evolution-text" style="color:#ffcc00;"></span><br>
+        <span id="difficulty-warning" style="color:#ff6644;font-size:9px;"></span>
+      </div>
+      <br>
+      <div class="blink" onclick="startGame()">— PRESS ENTER FOR NEXT LEVEL —</div>
+    </div>
+  </div>
+  <div id="message-bar">
+    ← → MOVE &nbsp; | &nbsp; SPACE JUMP &nbsp; | &nbsp; ↑↓ CLIMB LADDERS &nbsp; | &nbsp; P PAUSE
+    &nbsp;&nbsp;
+    <span id="mute-btn" onclick="toggleMute()" style="cursor:pointer;color:#ffcc00;border:1px solid #ffcc00;padding:2px 8px;border-radius:3px;">🔊 MUTE</span>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// APPLE RESCUE — A Donkey Kong-style platformer
+// ============================================================
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width;
+const H = canvas.height;
+
+// Game state
+let gameState = 'start'; // start, playing, dead, gameover, win
+let paused = false;
+let score = 0;
+let lives = 3;
+let level = 1;
+let deathTimer = 0;
+let knifeTimer = 0;
+let frameCount = 0;
+
+// ====== AUDIO ======
+const bgMusic = new Audio();
+bgMusic.crossOrigin = 'anonymous';
+bgMusic.src = 'https://post-genius-media.s3.amazonaws.com/shup/20260210/for-8-bit-game-music-loop.wav';
+bgMusic.loop = true;
+bgMusic.volume = 0.3;
+bgMusic.preload = 'auto';
+
+const knifeSound = new Audio();
+knifeSound.crossOrigin = 'anonymous';
+knifeSound.src = 'https://post-genius-media.s3.amazonaws.com/shup/20260210/knife_attack.wav';
+knifeSound.volume = 0.6;
+knifeSound.preload = 'auto';
+
+const laughSound = new Audio();
+laughSound.crossOrigin = 'anonymous';
+laughSound.src = 'https://post-genius-media.s3.amazonaws.com/shup/20260210/minion-evil-laugh.wav';
+laughSound.volume = 0.5;
+laughSound.preload = 'auto';
+
+const winSound = new Audio();
+winSound.crossOrigin = 'anonymous';
+winSound.src = 'https://post-genius-media.s3.amazonaws.com/shup/20260210/8-bit-win-1.wav';
+winSound.volume = 0.7;
+winSound.preload = 'auto';
+
+const jumpSound = new Audio();
+jumpSound.crossOrigin = 'anonymous';
+jumpSound.src = 'https://post-genius-media.s3.amazonaws.com/shup/20260210/8-bit-recharge.wav';
+jumpSound.volume = 0.4;
+jumpSound.preload = 'auto';
+
+let audioStarted = false;
+let audioMuted = false;
+
+// Log audio loading status
+[bgMusic, knifeSound, laughSound, winSound, jumpSound].forEach((a, i) => {
+  const names = ['BGMusic', 'KnifeSound', 'LaughSound', 'WinSound', 'JumpSound'];
+  a.addEventListener('canplaythrough', () => console.log(names[i] + ' loaded OK'));
+  a.addEventListener('error', (e) => console.error(names[i] + ' FAILED to load:', e));
+});
+
+function startAudio() {
+  if (!audioMuted) {
+    bgMusic.play().then(() => {
+      console.log('BG music playing');
+      audioStarted = true;
+    }).catch((e) => {
+      if (!audioStarted) {
+        console.error('BG music blocked:', e);
+        // Retry on next user click
+        document.addEventListener('click', () => {
+          if (!audioStarted && !audioMuted) {
+            bgMusic.play().then(() => { audioStarted = true; }).catch(() => {});
+          }
+        }, { once: true });
+      }
+    });
+  }
+}
+
+function playSound(sound) {
+  if (audioMuted) return;
+  const clone = sound.cloneNode();
+  clone.volume = sound.volume;
+  clone.play().catch(() => {});
+}
+
+function toggleMute() {
+  audioMuted = !audioMuted;
+  if (audioMuted) {
+    bgMusic.pause();
+    document.getElementById('mute-btn').textContent = '🔇 UNMUTE';
+  } else {
+    bgMusic.play().catch(() => {});
+    audioStarted = true;
+    document.getElementById('mute-btn').textContent = '🔊 MUTE';
+  }
+}
+
+// ====== PLATFORM LAYOUT ======
+const PLAT_H = 10;
+const platforms = [];
+const ladders = [];
+const knives = [];
+const collectibles = [];
+
+function buildLevel() {
+  platforms.length = 0;
+  ladders.length = 0;
+  knives.length = 0;
+  collectibles.length = 0;
+
+  // Ground
+  platforms.push({ x: 0, y: H - 30, w: W, h: PLAT_H });
+
+  // Steeper tilts at higher levels
+  const tiltBase = 0.02 + Math.min(level - 1, 8) * 0.004;
+
+  // Platform rows (from bottom to top) with slight tilts like DK
+  const rows = [
+    { y: H - 110, x: 40, w: W - 60, tilt: tiltBase },
+    { y: H - 190, x: 20, w: W - 60, tilt: -tiltBase },
+    { y: H - 270, x: 40, w: W - 60, tilt: tiltBase },
+    { y: H - 350, x: 20, w: W - 60, tilt: -tiltBase },
+    { y: H - 430, x: 40, w: W - 60, tilt: tiltBase },
+    // Top platform (villain + Nick)
+    { y: 60, x: 100, w: W - 200, tilt: 0 },
+  ];
+
+  rows.forEach(r => {
+    const segs = 8;
+    const segW = r.w / segs;
+    for (let i = 0; i < segs; i++) {
+      const px = r.x + i * segW;
+      const py = r.y + i * segW * r.tilt;
+      platforms.push({ x: px, y: py, w: segW + 2, h: PLAT_H });
+    }
+  });
+
+  // Core ladders (always present) — including one under Nick
+  const coreLadders = [
+    { x: 540, y: H - 110, h: 80 },
+    { x: 120, y: H - 190, h: 80 },
+    { x: 480, y: H - 270, h: 80 },
+    { x: 160, y: H - 350, h: 80 },
+    { x: 420, y: H - 430, h: 80 },
+    { x: 420, y: 60, h: 70 },  // Under Nick — always there
+  ];
+
+  // Extra ladders — removed progressively as levels increase
+  const allExtras = [
+    { x: 300, y: H - 110, h: 80 },
+    { x: 380, y: H - 190, h: 80 },
+    { x: 250, y: H - 270, h: 80 },
+    { x: 400, y: H - 350, h: 80 },
+    { x: 200, y: H - 430, h: 80 },
+  ];
+
+  // At level 1: all extras. Remove one extra per level.
+  const extrasToKeep = Math.max(0, allExtras.length - (level - 1));
+  // Shuffle extras so different ones disappear each time
+  const shuffled = allExtras.sort(() => Math.random() - 0.5);
+  const extras = shuffled.slice(0, extrasToKeep);
+
+  coreLadders.concat(extras).forEach(l => {
+    ladders.push({ x: l.x, y: l.y, w: 24, h: l.h });
+  });
+
+  // Collectibles (bonus fruit) — worth more at higher levels
+  const fruits = ['🍌', '🍇', '🍊', '🍓', '🫐'];
+  for (let i = 0; i < 5; i++) {
+    collectibles.push({
+      x: 80 + Math.random() * (W - 160),
+      y: (H - 130) - i * 80 + Math.random() * 20,
+      emoji: fruits[i % fruits.length],
+      points: (100 + i * 50) * level,
+      alive: true,
+      bobOffset: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+// ====== PLAYER (APPLE) ======
+const player = {
+  x: 60, y: H - 60, w: 28, h: 28,
+  vx: 0, vy: 0,
+  onGround: false,
+  climbing: false,
+  facing: 1,
+  frame: 0,
+  dead: false,
+  sliceAnim: 0,
+  sliceParts: []
+};
+
+// ====== EVIL CHEF (VILLAIN) ======
+const villain = {
+  x: 160, y: 20,
+  frame: 0,
+  throwTimer: 0
+};
+
+// ====== NICK GIOVANNI (RESCUE TARGET) ======
+const nick = {
+  x: 420, y: 20,
+  frame: 0
+};
+
+// ====== FRUIT PROGRESSION (common → exotic) ======
+const FRUITS = [
+  { name: 'Apple',       emoji: '🍎', bodyColor: '#e52020', highlight: 'rgba(255,150,150,0.4)', inner: '#ffe8c0', stem: true,  leaf: true,  legColor: '#c41818', shape: 'round' },
+  { name: 'Orange',      emoji: '🍊', bodyColor: '#ff8c00', highlight: 'rgba(255,200,100,0.4)', inner: '#ffcc66', stem: false, leaf: true,  legColor: '#dd7700', shape: 'round' },
+  { name: 'Pear',        emoji: '🍐', bodyColor: '#a8c256', highlight: 'rgba(200,230,140,0.4)', inner: '#e8f0c0', stem: true,  leaf: true,  legColor: '#8aaa44', shape: 'pear' },
+  { name: 'Peach',       emoji: '🍑', bodyColor: '#ffaa88', highlight: 'rgba(255,200,180,0.5)', inner: '#ffe0c0', stem: true,  leaf: false, legColor: '#ee9977', shape: 'round' },
+  { name: 'Mango',       emoji: '🥭', bodyColor: '#ffbb33', highlight: 'rgba(255,220,100,0.4)', inner: '#ffe599', stem: true,  leaf: true,  legColor: '#ddaa22', shape: 'oval' },
+  { name: 'Pomegranate', emoji: '🫐', bodyColor: '#cc2244', highlight: 'rgba(255,100,120,0.3)', inner: '#ff4466', stem: true,  leaf: false, legColor: '#aa1133', shape: 'round' },
+  { name: 'Passion Fruit',emoji:'💜', bodyColor: '#7733aa', highlight: 'rgba(180,120,255,0.4)', inner: '#ffcc00', stem: false, leaf: false, legColor: '#6622aa', shape: 'oval' },
+  { name: 'Dragon Fruit', emoji: '🐉', bodyColor: '#ee3388', highlight: 'rgba(255,140,200,0.4)', inner: '#f0f0f0', stem: false, leaf: false, legColor: '#cc2277', shape: 'dragon' },
+  { name: 'Star Fruit',  emoji: '⭐', bodyColor: '#eedd00', highlight: 'rgba(255,255,150,0.5)', inner: '#ffffcc', stem: false, leaf: false, legColor: '#ccbb00', shape: 'star' },
+  { name: 'Durian',      emoji: '👑', bodyColor: '#bbaa44', highlight: 'rgba(220,210,120,0.4)', inner: '#ffee88', stem: false, leaf: false, legColor: '#aa9933', shape: 'spiky' },
+];
+
+function getCurrentFruit() {
+  const idx = Math.min(level - 1, FRUITS.length - 1);
+  return FRUITS[idx];
+}
+
+// ====== INPUT ======
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'KeyP' && gameState === 'playing') {
+    paused = !paused;
+    if (paused) {
+      bgMusic.pause();
+    } else {
+      if (!audioMuted) bgMusic.play().catch(() => {});
+    }
+  }
+  if (e.code === 'Enter' || e.code === 'Space') {
+    if (gameState === 'start') startGame();
+    else if (gameState === 'gameover') startGame();
+    else if (gameState === 'win') { level++; startGame(); }
+  }
+  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+    e.preventDefault();
+  }
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// Touch controls
+let touchLeft = false, touchRight = false, touchUp = false, touchDown = false, touchJump = false;
+canvas.addEventListener('touchstart', handleTouch, { passive: false });
+canvas.addEventListener('touchmove', handleTouch, { passive: false });
+canvas.addEventListener('touchend', () => {
+  touchLeft = touchRight = touchUp = touchDown = touchJump = false;
+});
+
+function handleTouch(e) {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const scaleY = H / rect.height;
+  for (const t of e.touches) {
+    const tx = (t.clientX - rect.left) * scaleX;
+    const ty = (t.clientY - rect.top) * scaleY;
+    if (tx < W / 3) touchLeft = true;
+    else if (tx > W * 2 / 3) touchRight = true;
+    if (ty < H / 3) { touchUp = true; touchJump = true; }
+    else if (ty > H * 2 / 3) touchDown = true;
+  }
+}
+
+// ====== DRAWING FUNCTIONS ======
+
+function drawFruit(x, y, size, facing) {
+  const f = getCurrentFruit();
+  const cx = x + size/2;
+  const cy = y + size/2 + 2;
+  const r = size/2 - 2;
+
+  // Body shape
+  ctx.fillStyle = f.bodyColor;
+  ctx.beginPath();
+  if (f.shape === 'pear') {
+    ctx.moveTo(cx, y + 2);
+    ctx.bezierCurveTo(cx - r*0.4, y + 4, cx - r*1.1, cy - 2, cx - r, cy + 4);
+    ctx.bezierCurveTo(cx - r, cy + r, cx + r, cy + r, cx + r, cy + 4);
+    ctx.bezierCurveTo(cx + r*1.1, cy - 2, cx + r*0.4, y + 4, cx, y + 2);
+    ctx.fill();
+  } else if (f.shape === 'oval') {
+    ctx.ellipse(cx, cy, r * 0.8, r, 0, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (f.shape === 'dragon') {
+    // Pink body with scale-like edges
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    // Green tip "leaves"
+    for (let a = 0; a < 6; a++) {
+      const angle = a * Math.PI / 3 - Math.PI/2;
+      ctx.fillStyle = '#44cc44';
+      ctx.beginPath();
+      ctx.ellipse(cx + Math.cos(angle) * r * 0.9, cy + Math.sin(angle) * r * 0.9, 5, 3, angle, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = f.bodyColor;
+  } else if (f.shape === 'star') {
+    // 5-pointed star
+    for (let i = 0; i < 5; i++) {
+      const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+      const innerAngle = angle + Math.PI / 5;
+      const ox = cx + Math.cos(angle) * r;
+      const oy = cy + Math.sin(angle) * r;
+      const ix = cx + Math.cos(innerAngle) * r * 0.45;
+      const iy = cy + Math.sin(innerAngle) * r * 0.45;
+      if (i === 0) ctx.moveTo(ox, oy);
+      else ctx.lineTo(ox, oy);
+      ctx.lineTo(ix, iy);
+    }
+    ctx.closePath();
+    ctx.fill();
+  } else if (f.shape === 'spiky') {
+    // Durian - round with spikes
+    ctx.arc(cx, cy, r * 0.85, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#998833';
+    for (let a = 0; a < 10; a++) {
+      const angle = a * Math.PI / 5;
+      const sx = cx + Math.cos(angle) * r * 0.75;
+      const sy = cy + Math.sin(angle) * r * 0.75;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + Math.cos(angle) * 6, sy + Math.sin(angle) * 6);
+      ctx.lineTo(sx + Math.cos(angle + 0.3) * 3, sy + Math.sin(angle + 0.3) * 3);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = f.bodyColor;
+  } else {
+    // round (default)
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Highlight
+  ctx.fillStyle = f.highlight;
+  ctx.beginPath();
+  ctx.arc(cx - 3, cy - 4, r * 0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Stem
+  if (f.stem) {
+    ctx.strokeStyle = '#5a3a1a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx, y + 4);
+    ctx.lineTo(cx + 2, y - 2);
+    ctx.stroke();
+  }
+
+  // Leaf
+  if (f.leaf) {
+    ctx.fillStyle = '#44aa22';
+    ctx.beginPath();
+    ctx.ellipse(cx + 5, y + 1, 6, 3, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Eyes
+  const eyeDir = facing * 2;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(cx - 5 + eyeDir, cy - 2, 4, 0, Math.PI * 2);
+  ctx.arc(cx + 5 + eyeDir, cy - 2, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(cx - 4 + eyeDir, cy - 2, 2, 0, Math.PI * 2);
+  ctx.arc(cx + 6 + eyeDir, cy - 2, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cute mouth
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(cx + eyeDir * 0.5, cy + 4, 3, 0.1, Math.PI - 0.1);
+  ctx.stroke();
+
+  // Little legs when moving
+  if (Math.abs(player.vx) > 0.5 && player.onGround) {
+    const legOffset = Math.sin(frameCount * 0.3) * 4;
+    ctx.fillStyle = f.legColor;
+    ctx.fillRect(cx - 7, y + size - 2, 5, 4 + legOffset);
+    ctx.fillRect(cx + 3, y + size - 2, 5, 4 - legOffset);
+  }
+}
+
+function drawSlicedFruit(x, y, anim) {
+  const f = getCurrentFruit();
+  const spread = anim * 3;
+
+  // Left half
+  ctx.save();
+  ctx.translate(x + 14, y + 16);
+  ctx.rotate(-anim * 0.05);
+  ctx.translate(-14, -16);
+  ctx.translate(-spread, anim * 0.5);
+  ctx.fillStyle = f.bodyColor;
+  ctx.beginPath();
+  ctx.arc(14, 16, 12, Math.PI * 0.5, Math.PI * 1.5);
+  ctx.fill();
+  ctx.fillStyle = f.inner;
+  ctx.beginPath();
+  ctx.arc(14, 16, 10, Math.PI * 0.5, Math.PI * 1.5);
+  ctx.fill();
+  ctx.restore();
+
+  // Right half
+  ctx.save();
+  ctx.translate(x + 14, y + 16);
+  ctx.rotate(anim * 0.05);
+  ctx.translate(-14, -16);
+  ctx.translate(spread, anim * 0.5);
+  ctx.fillStyle = f.bodyColor;
+  ctx.beginPath();
+  ctx.arc(14, 16, 12, -Math.PI * 0.5, Math.PI * 0.5);
+  ctx.fill();
+  ctx.fillStyle = f.inner;
+  ctx.beginPath();
+  ctx.arc(14, 16, 10, -Math.PI * 0.5, Math.PI * 0.5);
+  ctx.fill();
+
+  // Seeds/details
+  ctx.fillStyle = '#663300';
+  ctx.beginPath();
+  ctx.ellipse(6, 14, 2, 3, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(4, 20, 2, 3, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawEvilChef(x, y) {
+  // Body
+  ctx.fillStyle = '#222';
+  ctx.fillRect(x, y + 16, 32, 24);
+
+  // Apron
+  ctx.fillStyle = '#ddd';
+  ctx.fillRect(x + 6, y + 18, 20, 20);
+
+  // Head
+  ctx.fillStyle = '#e8b878';
+  ctx.beginPath();
+  ctx.arc(x + 16, y + 10, 12, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Chef hat
+  ctx.fillStyle = '#111';
+  ctx.fillRect(x + 4, y - 8, 24, 12);
+  ctx.fillRect(x + 2, y - 18, 28, 14);
+  // Hat skull
+  ctx.fillStyle = '#ff2222';
+  ctx.font = '10px serif';
+  ctx.fillText('☠', x + 9, y - 5);
+
+  // Evil eyes
+  ctx.fillStyle = '#ff0000';
+  ctx.beginPath();
+  ctx.arc(x + 11, y + 8, 3, 0, Math.PI * 2);
+  ctx.arc(x + 21, y + 8, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(x + 11, y + 8, 1.5, 0, Math.PI * 2);
+  ctx.arc(x + 21, y + 8, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Evil grin
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(x + 16, y + 14, 6, 0.1, Math.PI - 0.1);
+  ctx.stroke();
+
+  // Knife in hand (bobbing)
+  const bob = Math.sin(frameCount * 0.1) * 3;
+  ctx.fillStyle = '#ccc';
+  ctx.fillRect(x - 8, y + 16 + bob, 12, 3);
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(x - 12, y + 14 + bob, 6, 7);
+}
+
+function drawNick(x, y) {
+  // Body
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x, y + 16, 28, 22);
+
+  // Head
+  ctx.fillStyle = '#e8b878';
+  ctx.beginPath();
+  ctx.arc(x + 14, y + 10, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Chef hat (white, good guy)
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(x + 3, y - 6, 22, 10);
+  ctx.fillRect(x + 1, y - 14, 26, 12);
+  ctx.strokeStyle = '#ddd';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 1, y - 14, 26, 12);
+
+  // Kind eyes
+  ctx.fillStyle = '#3366cc';
+  ctx.beginPath();
+  ctx.arc(x + 9, y + 9, 2.5, 0, Math.PI * 2);
+  ctx.arc(x + 19, y + 9, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Smile
+  ctx.strokeStyle = '#cc6644';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(x + 14, y + 12, 4, 0.2, Math.PI - 0.2);
+  ctx.stroke();
+
+  // "HELP!" text bobbing
+  if (frameCount % 90 < 60) {
+    ctx.fillStyle = '#ff4444';
+    ctx.font = '8px "Press Start 2P"';
+    ctx.fillText('HELP!', x - 4, y - 18);
+  }
+
+  // Tied up ropes
+  ctx.strokeStyle = '#aa8844';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - 2, y + 20);
+  ctx.lineTo(x + 30, y + 20);
+  ctx.moveTo(x - 2, y + 28);
+  ctx.lineTo(x + 30, y + 28);
+  ctx.stroke();
+}
+
+function drawKnife(knife) {
+  ctx.save();
+  ctx.translate(knife.x, knife.y);
+  ctx.rotate(knife.rot);
+
+  // Blade
+  ctx.fillStyle = '#d0d0d0';
+  ctx.beginPath();
+  ctx.moveTo(-14, -2);
+  ctx.lineTo(6, -3);
+  ctx.lineTo(8, 0);
+  ctx.lineTo(6, 3);
+  ctx.lineTo(-14, 2);
+  ctx.closePath();
+  ctx.fill();
+
+  // Shine
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillRect(-12, -1.5, 16, 1);
+
+  // Handle
+  ctx.fillStyle = '#6B3A1F';
+  ctx.fillRect(-20, -3, 8, 6);
+
+  ctx.restore();
+}
+
+function drawPlatform(p) {
+  // Steel girder style
+  const grad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + p.h);
+  grad.addColorStop(0, '#c84a32');
+  grad.addColorStop(0.5, '#e86a4a');
+  grad.addColorStop(1, '#a03828');
+  ctx.fillStyle = grad;
+  ctx.fillRect(p.x, p.y, p.w, p.h);
+
+  // Rivet dots
+  ctx.fillStyle = '#ffaa66';
+  for (let rx = p.x + 8; rx < p.x + p.w; rx += 20) {
+    ctx.beginPath();
+    ctx.arc(rx, p.y + p.h / 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawLadder(l) {
+  ctx.strokeStyle = '#88ccff';
+  ctx.lineWidth = 3;
+  // Side rails
+  ctx.beginPath();
+  ctx.moveTo(l.x + 3, l.y);
+  ctx.lineTo(l.x + 3, l.y + l.h);
+  ctx.moveTo(l.x + l.w - 3, l.y);
+  ctx.lineTo(l.x + l.w - 3, l.y + l.h);
+  ctx.stroke();
+
+  // Rungs
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#66aadd';
+  for (let ry = l.y + 8; ry < l.y + l.h; ry += 12) {
+    ctx.beginPath();
+    ctx.moveTo(l.x + 3, ry);
+    ctx.lineTo(l.x + l.w - 3, ry);
+    ctx.stroke();
+  }
+}
+
+// ====== PHYSICS / GAME LOGIC ======
+
+function isOnPlatform(entity) {
+  for (const p of platforms) {
+    if (entity.x + entity.w > p.x && entity.x < p.x + p.w &&
+        entity.y + entity.h >= p.y && entity.y + entity.h <= p.y + 8 &&
+        entity.vy >= 0) {
+      return p;
+    }
+  }
+  return null;
+}
+
+function isOnLadder(entity) {
+  const cx = entity.x + entity.w / 2;
+  const cy = entity.y + entity.h / 2;
+  for (const l of ladders) {
+    if (cx > l.x && cx < l.x + l.w &&
+        cy > l.y - 5 && cy < l.y + l.h + 5) {
+      return l;
+    }
+  }
+  return null;
+}
+
+function spawnKnife() {
+  const speed = 1.8 + Math.min(level - 1, 9) * 0.5 + Math.random() * 1.0;
+  const dir = Math.random() > 0.5 ? 1 : -1;
+  knives.push({
+    x: villain.x + 16,
+    y: villain.y + 30,
+    vx: dir * speed,
+    vy: 0,
+    rot: 0,
+    rotSpeed: dir * 0.12,
+    onPlatform: false,
+    w: 20,
+    h: 6,
+    landed: false,
+    platY: -999,
+    skipY: -999
+  });
+}
+
+function updateKnives() {
+  for (let i = knives.length - 1; i >= 0; i--) {
+    const k = knives[i];
+
+    // Gravity when not on a platform
+    if (!k.onPlatform) {
+      k.vy += 0.35;
+      if (k.vy > 8) k.vy = 8;
+    }
+
+    k.x += k.vx;
+    k.y += k.vy;
+    k.rot += k.rotSpeed;
+
+    // Landing on platforms
+    if (!k.onPlatform && k.vy > 0) {
+      for (const p of platforms) {
+        // Skip platforms at the same Y-level we just fell off
+        if (Math.abs(p.y - k.skipY) < 30) continue;
+
+        if (k.x + 10 > p.x && k.x - 10 < p.x + p.w &&
+            k.y + 4 >= p.y && k.y + 4 <= p.y + 14) {
+          k.y = p.y - 4;
+          k.vy = 0;
+          k.onPlatform = true;
+          k.platY = p.y;
+          k.skipY = -999; // Reset skip
+
+          // Reverse direction on each new platform (like DK barrels)
+          if (k.landed) {
+            k.vx = -Math.sign(k.vx) * (1.8 + Math.min(level - 1, 9) * 0.5 + Math.random() * 0.5);
+          }
+          k.landed = true;
+          k.rotSpeed = Math.sign(k.vx) * 0.12;
+          break;
+        }
+      }
+    }
+
+    // Rolling — check if we've gone past ALL segments at this row's Y-level
+    if (k.onPlatform) {
+      let onAny = false;
+      for (const p of platforms) {
+        // Only check platforms at the same Y-level (within tolerance for tilt)
+        if (Math.abs(p.y - k.platY) > 20) continue;
+        if (k.x + 10 > p.x && k.x - 10 < p.x + p.w) {
+          onAny = true;
+          // Snap Y to follow tilted segments
+          k.y = p.y - 4;
+          break;
+        }
+      }
+      if (!onAny) {
+        // Fell off the real edge of the entire row
+        k.onPlatform = false;
+        k.skipY = k.platY; // Remember this row so we fall past it
+        k.vy = 1;
+        k.vx = Math.sign(k.vx) * 0.3; // Small drift while falling
+        k.rotSpeed = Math.sign(k.vx) * 0.2;
+      }
+    }
+
+    // Collision with player
+    if (!player.dead) {
+      const dx = Math.abs(k.x - (player.x + player.w/2));
+      const dy = Math.abs(k.y - (player.y + player.h/2));
+      if (dx < 16 && dy < 16) {
+        playerHit();
+      }
+    }
+
+    // Remove only if off the bottom
+    if (k.y > H + 50) {
+      knives.splice(i, 1);
+    }
+  }
+}
+
+function playerHit() {
+  player.dead = true;
+  player.sliceAnim = 0;
+  lives--;
+  deathTimer = 120;
+  playSound(knifeSound);
+}
+
+function updatePlayer() {
+  if (player.dead) {
+    player.sliceAnim++;
+    deathTimer--;
+    if (deathTimer <= 0) {
+      if (lives <= 0) {
+        gameState = 'gameover';
+        const deadFruit = getCurrentFruit();
+        document.getElementById('final-score').textContent = score;
+        document.getElementById('death-emoji').textContent = deadFruit.emoji + '💀';
+        document.getElementById('death-subtitle').textContent = 'The Evil Chef sliced the ' + deadFruit.name + '...';
+        document.getElementById('game-over-screen').style.display = 'flex';
+        bgMusic.pause();
+        playSound(laughSound);
+      } else {
+        player.dead = false;
+        player.x = 60;
+        player.y = H - 60;
+        player.vx = 0;
+        player.vy = 0;
+        player.climbing = false;
+        knives.length = 0;
+      }
+    }
+    updateHUD();
+    return;
+  }
+
+  const moveLeft = keys['ArrowLeft'] || touchLeft;
+  const moveRight = keys['ArrowRight'] || touchRight;
+  const moveUp = keys['ArrowUp'] || touchUp;
+  const moveDown = keys['ArrowDown'] || touchDown;
+  const jump = keys['Space'] || touchJump;
+
+  const ladder = isOnLadder(player);
+
+  if (ladder && (moveUp || moveDown)) {
+    player.climbing = true;
+  }
+
+  if (player.climbing) {
+    if (!ladder) {
+      player.climbing = false;
+    } else {
+      player.vy = 0;
+      player.vx = 0;
+      if (moveUp) player.y -= 2;
+      if (moveDown) player.y += 2;
+      if (moveLeft) player.x -= 1;
+      if (moveRight) player.x += 1;
+
+      // Check if we've reached top of ladder
+      if (player.y + player.h < ladder.y) {
+        player.climbing = false;
+        player.y = ladder.y - player.h;
+      }
+      // Bottom of ladder
+      if (player.y + player.h / 2 > ladder.y + ladder.h) {
+        player.climbing = false;
+      }
+
+      if (jump) {
+        player.climbing = false;
+        player.vy = -6;
+        playSound(jumpSound);
+      }
+      return;
+    }
+  }
+
+  // Horizontal movement
+  const accel = player.onGround ? 0.6 : 0.3;
+  const friction = player.onGround ? 0.8 : 0.95;
+
+  if (moveLeft) { player.vx -= accel; player.facing = -1; }
+  if (moveRight) { player.vx += accel; player.facing = 1; }
+  player.vx *= friction;
+  if (Math.abs(player.vx) < 0.1) player.vx = 0;
+
+  // Clamp speed
+  if (player.vx > 4) player.vx = 4;
+  if (player.vx < -4) player.vx = -4;
+
+  // Jump
+  if (jump && player.onGround) {
+    player.vy = -7.5;
+    player.onGround = false;
+    playSound(jumpSound);
+  }
+
+  // Gravity
+  player.vy += 0.35;
+  if (player.vy > 8) player.vy = 8;
+
+  // Move
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // Platform collision
+  const plat = isOnPlatform(player);
+  if (plat && player.vy >= 0) {
+    player.y = plat.y - player.h;
+    player.vy = 0;
+    player.onGround = true;
+  } else if (!plat) {
+    player.onGround = false;
+  }
+
+  // Screen bounds
+  if (player.x < 0) player.x = 0;
+  if (player.x + player.w > W) player.x = W - player.w;
+  if (player.y > H) {
+    playerHit();
+  }
+
+  // Collectibles
+  for (const c of collectibles) {
+    if (!c.alive) continue;
+    const dx = Math.abs((player.x + player.w/2) - c.x);
+    const dy = Math.abs((player.y + player.h/2) - c.y);
+    if (dx < 20 && dy < 20) {
+      c.alive = false;
+      score += c.points;
+    }
+  }
+
+  // Win condition — reach Nick
+  const dx = Math.abs((player.x + player.w/2) - (nick.x + 14));
+  const dy = Math.abs((player.y + player.h/2) - (nick.y + 18));
+  if (dx < 30 && dy < 30) {
+    gameState = 'win';
+    playSound(winSound);
+    const curFruit = getCurrentFruit();
+    const nextIdx = Math.min(level, FRUITS.length - 1);
+    const nextFruit = FRUITS[nextIdx];
+    score += 1000;
+
+    // Bonus life every 3 levels
+    let bonusMsg = '';
+    if (level % 3 === 0) {
+      lives = Math.min(lives + 1, 5);
+      bonusMsg = '\n❤️ BONUS LIFE! ❤️';
+    }
+
+    document.getElementById('win-score').textContent = score;
+    document.getElementById('win-emoji').textContent = curFruit.emoji + '🎉';
+    document.getElementById('win-grazie').textContent = '"Grazie, little ' + curFruit.name + '!"';
+    if (nextIdx > level - 1) {
+      document.getElementById('evolution-text').textContent =
+        '✨ You evolved! ' + curFruit.emoji + ' ' + curFruit.name + ' → ' + nextFruit.emoji + ' ' + nextFruit.name + ' ✨' + bonusMsg;
+    } else {
+      document.getElementById('evolution-text').textContent =
+        '👑 MAX EVOLUTION! The mighty ' + curFruit.name + '! 👑' + bonusMsg;
+    }
+    document.getElementById('win-screen').style.display = 'flex';
+    bgMusic.pause();
+
+    // Difficulty warning
+    const warnings = [
+      '', // level 1→2
+      'The chef is getting angry...', // 2→3
+      '⚠️ Double knives incoming!', // 3→4
+      'Ladders are disappearing...', // 4→5
+      'The knives are faster!', // 5→6
+      '⚠️ The chef is furious!', // 6→7
+      '🔪🔪🔪 TRIPLE KNIVES! 🔪🔪🔪', // 7→8
+      'Only the worthy survive...', // 8→9
+      '⚠️ MAXIMUM DANGER ⚠️', // 9→10
+      '👑 You are unstoppable!', // 10+
+    ];
+    const wIdx = Math.min(level - 1, warnings.length - 1);
+    document.getElementById('difficulty-warning').textContent = warnings[wIdx];
+  }
+
+  player.frame++;
+}
+
+function updateHUD() {
+  const f = getCurrentFruit();
+  document.getElementById('score').textContent = score;
+  let hearts = '';
+  for (let i = 0; i < lives; i++) hearts += '❤️';
+  if (lives <= 0) hearts = '💀';
+  document.getElementById('lives').textContent = hearts;
+  document.getElementById('level').textContent = level;
+  document.getElementById('fruit-name').textContent = f.name;
+  document.getElementById('game-title').textContent = f.emoji + ' FRUIT RESCUE';
+}
+
+// ====== MAIN DRAW ======
+function drawBackground() {
+  // Dark factory / kitchen background
+  ctx.fillStyle = '#0e0e1a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Brick pattern
+  ctx.fillStyle = 'rgba(60, 30, 20, 0.3)';
+  for (let by = 0; by < H; by += 20) {
+    const offset = (Math.floor(by / 20) % 2) * 20;
+    for (let bx = offset; bx < W; bx += 40) {
+      ctx.fillRect(bx + 1, by + 1, 38, 18);
+    }
+  }
+
+  // Subtle dark gradient at bottom
+  const grad = ctx.createLinearGradient(0, H - 100, 0, H);
+  grad.addColorStop(0, 'transparent');
+  grad.addColorStop(1, 'rgba(0,0,0,0.4)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, H - 100, W, 100);
+}
+
+function draw() {
+  drawBackground();
+
+  // Draw ladders (behind platforms)
+  ladders.forEach(drawLadder);
+
+  // Draw platforms
+  platforms.forEach(drawPlatform);
+
+  // Draw collectibles
+  collectibles.forEach(c => {
+    if (!c.alive) return;
+    const bob = Math.sin(frameCount * 0.05 + c.bobOffset) * 3;
+    ctx.font = '18px serif';
+    ctx.fillText(c.emoji, c.x - 9, c.y + 6 + bob);
+    // Glow
+    ctx.fillStyle = 'rgba(255,255,100,0.15)';
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, 14, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Draw knives
+  knives.forEach(drawKnife);
+
+  // Draw villain
+  drawEvilChef(villain.x, villain.y);
+
+  // Draw Nick Giovanni
+  drawNick(nick.x, nick.y);
+
+  // Label for Nick
+  ctx.fillStyle = '#ffcc00';
+  ctx.font = '7px "Press Start 2P"';
+  ctx.fillText('NICK GIOVANNI', nick.x - 22, nick.y + 50);
+
+  // Draw player
+  if (player.dead) {
+    drawSlicedFruit(player.x, player.y, player.sliceAnim);
+    // "SLICED!" text
+    if (player.sliceAnim < 80) {
+      ctx.fillStyle = '#ff4444';
+      ctx.font = '12px "Press Start 2P"';
+      ctx.fillText('SLICED!', player.x - 16, player.y - 10 - player.sliceAnim * 0.3);
+    }
+  } else {
+    drawFruit(player.x, player.y, player.w, player.facing);
+  }
+}
+
+// ====== GAME LOOP ======
+function gameLoop() {
+  frameCount++;
+
+  if (gameState === 'playing' && !paused) {
+    updatePlayer();
+
+    // Evil chef throws knives — faster and more at higher levels
+    villain.throwTimer++;
+    // Throw interval: starts at 150, drops to min 40 at high levels
+    const throwInterval = Math.max(40, 150 - level * 14);
+    // Max knives on screen scales with level (prevents unplayable flood)
+    const maxKnives = Math.min(8 + level * 2, 30);
+    if (villain.throwTimer >= throwInterval && knives.length < maxKnives) {
+      villain.throwTimer = 0;
+      spawnKnife();
+      // Evil laugh randomly (~25% of throws, not every time)
+      if (Math.random() < 0.25) playSound(laughSound);
+      // Level 4+: sometimes throw 2 knives at once
+      if (level >= 4 && Math.random() < 0.4 && knives.length < maxKnives) {
+        setTimeout(() => { if (gameState === 'playing' && !paused && knives.length < maxKnives) spawnKnife(); }, 150);
+      }
+      // Level 7+: sometimes throw 3 knives at once
+      if (level >= 7 && Math.random() < 0.3 && knives.length < maxKnives) {
+        setTimeout(() => { if (gameState === 'playing' && !paused && knives.length < maxKnives) spawnKnife(); }, 300);
+      }
+    }
+
+    // Villain animation — moves faster at higher levels
+    villain.frame++;
+    const villainSpeed = 0.02 + Math.min(level - 1, 9) * 0.005;
+    const villainRange = 30 + Math.min(level - 1, 9) * 10;
+    villain.x = 150 + Math.sin(villain.frame * villainSpeed) * villainRange;
+
+    updateKnives();
+    updateHUD();
+  }
+
+  draw();
+
+  // Draw pause overlay
+  if (paused && gameState === 'playing') {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = '32px "Press Start 2P"';
+    ctx.textAlign = 'center';
+    ctx.fillText('PAUSED', W/2, H/2 - 20);
+    ctx.font = '10px "Press Start 2P"';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('Press P to Resume', W/2, H/2 + 20);
+    ctx.textAlign = 'left';
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ====== START / RESTART ======
+function startGame() {
+  if (gameState === 'gameover' || gameState === 'start') {
+    score = 0;
+    lives = 3;
+    level = 1;
+  }
+
+  gameState = 'playing';
+  paused = false;
+  player.x = 60;
+  player.y = H - 60;
+  player.vx = 0;
+  player.vy = 0;
+  player.dead = false;
+  player.climbing = false;
+  player.onGround = false;
+  knives.length = 0;
+  knifeTimer = 0;
+  villain.throwTimer = 0;
+  villain.x = 150;
+
+  buildLevel();
+  updateHUD();
+
+  // Start background music
+  startAudio();
+
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('game-over-screen').style.display = 'none';
+  document.getElementById('win-screen').style.display = 'none';
+}
+
+// Kick off
+buildLevel();
+gameLoop();
+</script>
+</body>
+</html>

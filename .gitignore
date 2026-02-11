@@ -1,0 +1,9 @@
+# Exclude source sound directories
+evil-lajugh/
+music/
+jump/
+knife-attack/
+win/
+
+# Exclude zip files
+*.zip
