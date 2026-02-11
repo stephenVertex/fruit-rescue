@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
 <title>Fruit Rescue — Save Chef Nick Giovanni!</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap');
@@ -1454,7 +1456,8 @@ function gameLoop() {
   if (frameTimes.length > 60) frameTimes.shift();
   const avgDelta = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
   fps = Math.round(1000 / avgDelta);
-  document.getElementById('fps-counter').textContent = `FPS: ${fps}`;
+  const frameTime = avgDelta.toFixed(1);
+  document.getElementById('fps-counter').textContent = `FPS: ${fps} (${frameTime}ms)`;
 
   if (gameState === 'playing' && !paused) {
     updatePlayer();
